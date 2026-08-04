@@ -24,6 +24,3 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          # Brand assets live in home-assistant/brands; until this domain is
-          # accepted there the check can only ever fail.
-          ignore: brands
