@@ -10,6 +10,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import NinaApiClient
 from .coordinator import NinaDataUpdateCoordinator
+from .websocket import NinaWebsocketListener
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +34,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: NinaConfigEntry) -> bool
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
+
+    # Push channel. It reconnects on its own and never blocks setup, so an
+    # unreachable N.I.N.A. just leaves the integration on its poll interval.
+    listener = NinaWebsocketListener(
+        hass, client, coordinator, entry.entry_id, session
+    )
+    listener.start(entry)
+    entry.async_on_unload(listener.async_stop)
 
     # Picks up a changed host/port from the reconfigure flow and a changed
     # poll interval from the options flow - both only take effect on reload.

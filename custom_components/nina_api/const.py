@@ -25,6 +25,16 @@ MAX_SCAN_INTERVAL = 3600
 WS_RECONNECT_DELAY = 5  # seconds
 WS_RECONNECT_DELAY_MAX = 60  # seconds
 
+# Every N.I.N.A. event is forwarded onto the Home Assistant bus under this
+# single event type, with the NINA event name in the "type" field. One event
+# type keeps automations simple and means events the plugin adds later work
+# without a change here.
+EVENT_NINA = f"{DOMAIN}_event"
+
+# The plugin tags socket frames with this, to distinguish them from the
+# envelope used by the REST API (source: HttpResponse.TypeSocket).
+WS_MESSAGE_TYPE = "Socket"
+
 # -- Device identifiers (sub-devices under one config entry) ------------
 DEVICE_APPLICATION = "application"
 DEVICE_MOUNT = "mount"

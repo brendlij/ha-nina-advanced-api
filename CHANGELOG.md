@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **WebSocket push.** A listener holds a connection to `/v2/socket` and
+  re-fires every N.I.N.A. event onto the Home Assistant bus as
+  `nina_api_event`, carrying the event name in `type` and any extra payload in
+  `data`. This exposes things polling cannot see at all — `SEQUENCE-STARTING`,
+  `SEQUENCE-FINISHED`, `IMAGE-SAVE`, `AUTOFOCUS-FINISHED`, `MOUNT-BEFORE-FLIP`,
+  `SAFETY-CHANGED`, `ERROR-AF` and the rest. Event names are not hardcoded, so
+  events added by future plugin versions (or by Target Scheduler) are forwarded
+  as well.
+- Each event also triggers an immediate, debounced state refresh, so entities
+  no longer wait up to a full poll interval after something happens.
+
+### Changed
+
+- `iot_class` back to `local_push` now that the websocket exists.
+- The listener reconnects on its own with a capped exponential backoff and
+  never blocks setup: with N.I.N.A. closed the integration simply stays on its
+  poll interval, and the first failure is logged once rather than every retry.
+
 ## [0.2.0] — 2026-08-04
 
 Full sequence, mount and camera coverage, and the integration no longer falls

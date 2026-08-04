@@ -120,6 +120,58 @@ directory and restart.
 The new address is validated before it is saved, and the entry is updated in
 place — entity IDs, history and dashboard cards all survive the change.
 
+## Events
+
+The integration keeps a websocket open to `ws://<host>:<port>/v2/socket` and
+re-fires everything N.I.N.A. pushes onto the Home Assistant event bus as
+`nina_api_event`. These are *moments*, not states — polling cannot see them.
+
+```yaml
+event_type: nina_api_event
+event_data:
+  type: SEQUENCE-STARTING     # the N.I.N.A. event name
+  entry_id: 01JB…             # which N.I.N.A. instance
+  data: {}                    # any extra fields the event carried
+```
+
+Trigger on one specific event:
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: nina_api_event
+    event_data:
+      type: SEQUENCE-FINISHED
+```
+
+Or catch everything and branch in a template — useful while exploring. Watch
+them live in **Developer tools → Events**, listen to `nina_api_event`.
+
+| Group | Events |
+| --- | --- |
+| Sequence | `SEQUENCE-STARTING`, `SEQUENCE-FINISHED`, `SEQUENCE-ENTITY-FAILED` |
+| Imaging | `IMAGE-SAVE`, `API-CAPTURE-FINISHED`, `CAMERA-DOWNLOAD-TIMEOUT` |
+| Autofocus | `AUTOFOCUS-STARTING`, `AUTOFOCUS-FINISHED`, `AUTOFOCUS-POINT-ADDED`, `ERROR-AF` |
+| Mount | `MOUNT-BEFORE-FLIP`, `MOUNT-AFTER-FLIP`, `MOUNT-HOMED`, `MOUNT-PARKED`, `MOUNT-UNPARKED`, `MOUNT-CENTER` |
+| Guider | `GUIDER-START`, `GUIDER-STOP`, `GUIDER-DITHER` |
+| Focuser | `FOCUSER-USER-FOCUSED` |
+| Filter wheel | `FILTERWHEEL-CHANGED` |
+| Dome / roof | `DOME-SHUTTER-OPENED`, `DOME-SHUTTER-CLOSED`, `DOME-SLEWED`, `DOME-SYNCED`, `DOME-HOMED`, `DOME-PARKED`, `DOME-STOPPED` |
+| Flat panel | `FLAT-COVER-OPENED`, `FLAT-COVER-CLOSED`, `FLAT-LIGHT-TOGGLED`, `FLAT-BRIGHTNESS-CHANGED` |
+| Safety | `SAFETY-CHANGED` |
+| Rotator | `ROTATOR-MOVED`, `ROTATOR-MOVED-MECHANICAL`, `ROTATOR-SYNCED` |
+| Live stack | `STACK-STATUS`, `STACK-UPDATED` |
+| Plate solve | `ERROR-PLATESOLVE` |
+| Profile | `PROFILE-ADDED`, `PROFILE-CHANGED`, `PROFILE-REMOVED` |
+| Equipment | `<DEVICE>-CONNECTED` / `<DEVICE>-DISCONNECTED` for camera, mount, focuser, filter wheel, rotator, dome, flat, guider, switch, weather, safety |
+
+The list is not hardcoded — any event a future plugin version adds is forwarded
+too, and the Target Scheduler plugin publishes its own topics through the same
+channel.
+
+Every event also nudges an immediate state refresh, so entities do not wait for
+the next poll.
+
 ## Automation examples
 
 Cool the camera down as soon as N.I.N.A. comes online:
@@ -137,22 +189,44 @@ automation:
           entity_id: switch.camera_cooler
 ```
 
-Get notified when the sequence finishes and the mount parks itself:
+Get notified the moment the sequence finishes:
 
 ```yaml
 automation:
   - alias: "Notify when imaging is done"
     triggers:
-      - trigger: state
-        entity_id: binary_sensor.sequence_running
-        from: "on"
-        to: "off"
+      - trigger: event
+        event_type: nina_api_event
+        event_data:
+          type: SEQUENCE-FINISHED
     actions:
       - action: notify.mobile_app
         data:
           message: >-
             Sequence finished — {{ state_attr('sensor.sequence_progress',
             'items_finished') }} steps completed.
+```
+
+React to the safety monitor going unsafe — park the mount and stop the run:
+
+```yaml
+automation:
+  - alias: "Abort on unsafe conditions"
+    triggers:
+      - trigger: event
+        event_type: nina_api_event
+        event_data:
+          type: SAFETY-CHANGED
+    conditions:
+      - condition: template
+        value_template: "{{ not trigger.event.data.data.IsSafe }}"
+    actions:
+      - action: button.press
+        target:
+          entity_id: button.sequence_stop_sequence
+      - action: button.press
+        target:
+          entity_id: button.mount_park
 ```
 
 > Entity IDs depend on how Home Assistant slugified them at creation. Check
