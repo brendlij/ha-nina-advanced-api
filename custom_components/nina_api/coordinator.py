@@ -1,8 +1,8 @@
 """DataUpdateCoordinator for the N.I.N.A. Advanced API integration.
 
-Fetches application/mount/camera state on a fixed poll interval as a
-fallback, and can be nudged for an immediate refresh by the websocket
-listener (see websocket.py) whenever NINA pushes an event.
+Fetches application/mount/camera/sequence state on a fixed poll interval.
+Every sub-fetch is isolated: equipment can be legitimately absent or
+disconnected in NINA without that making the whole entry unavailable.
 """
 from __future__ import annotations
 
@@ -14,10 +14,19 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import NinaApiClient, NinaApiConnectionError, NinaApiError
-from .const import DOMAIN, UPDATE_INTERVAL
+from .api import (
+    NinaApiClient,
+    NinaApiConnectionError,
+    NinaApiError,
+    NinaApiResponseError,
+)
+from .const import DOMAIN, SEQUENCE_STATUS_RUNNING, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
+
+# NINA answers 409 when a sub-system exists but has nothing loaded or
+# connected yet. That is a normal idle state, not an error worth logging.
+_STATUS_NOT_READY = 409
 
 
 @dataclass
@@ -25,9 +34,64 @@ class NinaData:
     """Snapshot of everything the entities need."""
 
     application_connected: bool = False
+    api_version: str | None = None
+    nina_version: str | None = None
     application: dict[str, Any] = field(default_factory=dict)
     mount: dict[str, Any] = field(default_factory=dict)
     camera: dict[str, Any] = field(default_factory=dict)
+
+    # Sequence
+    sequence_loaded: bool = False
+    sequence_running: bool = False
+    sequence_current_item: str | None = None
+    sequence_items_total: int = 0
+    sequence_items_finished: int = 0
+    sequence_state: list[Any] = field(default_factory=list)
+
+    @property
+    def sequence_progress(self) -> float | None:
+        """Percentage of finished leaf items, or None if nothing is loaded."""
+        if not self.sequence_items_total:
+            return None
+        return round(
+            100 * self.sequence_items_finished / self.sequence_items_total, 1
+        )
+
+
+def _walk_sequence(items: list[Any]) -> tuple[str | None, int, int]:
+    """Flatten the sequence tree into (running item name, total, finished).
+
+    Only leaf items are counted - containers just carry the status of
+    whatever is inside them, so counting them would double-count progress.
+    The deepest RUNNING leaf wins, which is the instruction NINA is
+    actually executing right now.
+    """
+    running: str | None = None
+    total = 0
+    finished = 0
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+
+        children = item.get("Items")
+        if isinstance(children, list):
+            child_running, child_total, child_finished = _walk_sequence(children)
+            total += child_total
+            finished += child_finished
+            if child_running is not None:
+                running = child_running
+            continue
+
+        # Leaf instruction
+        status = item.get("Status")
+        total += 1
+        if status in ("FINISHED", "SKIPPED"):
+            finished += 1
+        elif status == SEQUENCE_STATUS_RUNNING and running is None:
+            running = item.get("Name")
+
+    return running, total, finished
 
 
 class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
@@ -49,12 +113,15 @@ class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
             update_interval=UPDATE_INTERVAL,
         )
         self.client = client
+        # The NINA version cannot change while the app is running, so it is
+        # fetched once and carried across refreshes.
+        self._nina_version: str | None = None
 
     async def _async_update_data(self) -> NinaData:
         data = NinaData()
 
         try:
-            await self.client.get_api_version()
+            data.api_version = await self.client.get_api_version()
             data.application_connected = True
         except NinaApiConnectionError as err:
             # NINA itself isn't reachable at all -> whole entry is unavailable.
@@ -63,17 +130,57 @@ class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
             # Reachable but reported an error -> keep entry alive, just log it.
             _LOGGER.debug("version endpoint returned an error: %s", err)
 
-        # Equipment can be legitimately "not connected" in NINA (e.g. mount
-        # powered off) without that being a coordinator-level failure, so
-        # each equipment fetch is isolated.
-        try:
-            data.mount = await self.client.get_mount_info() or {}
-        except NinaApiError as err:
-            _LOGGER.debug("mount/info unavailable: %s", err)
+        if self._nina_version is None and data.application_connected:
+            try:
+                self._nina_version = await self.client.get_nina_version()
+            except NinaApiError as err:
+                _LOGGER.debug("NINA version unavailable: %s", err)
+        data.nina_version = self._nina_version
 
-        try:
-            data.camera = await self.client.get_camera_info() or {}
-        except NinaApiError as err:
-            _LOGGER.debug("camera/info unavailable: %s", err)
+        data.mount = await self._fetch("mount", self.client.get_mount_info)
+        data.camera = await self._fetch("camera", self.client.get_camera_info)
+
+        await self._update_sequence(data)
 
         return data
+
+    async def _fetch(self, name: str, method: Any) -> dict[str, Any]:
+        """Run one equipment fetch, downgrading its failure to a debug log."""
+        try:
+            result = await method()
+        except NinaApiError as err:
+            _LOGGER.debug("%s info unavailable: %s", name, err)
+            return {}
+        return result if isinstance(result, dict) else {}
+
+    async def _update_sequence(self, data: NinaData) -> None:
+        """Populate the sequence fields, treating 'not loaded' as idle."""
+        try:
+            state = await self.client.get_sequence_state()
+        except NinaApiResponseError as err:
+            if err.status_code != _STATUS_NOT_READY:
+                _LOGGER.debug("sequence state unavailable: %s", err)
+            return
+        except NinaApiError as err:
+            _LOGGER.debug("sequence state unavailable: %s", err)
+            return
+
+        if not isinstance(state, list):
+            return
+
+        data.sequence_loaded = True
+        data.sequence_state = state
+
+        # The first element is the GlobalTriggers wrapper, the rest are the
+        # actual root containers.
+        containers = [
+            item
+            for item in state
+            if isinstance(item, dict) and "GlobalTriggers" not in item
+        ]
+        running, total, finished = _walk_sequence(containers)
+
+        data.sequence_current_item = running
+        data.sequence_running = running is not None
+        data.sequence_items_total = total
+        data.sequence_items_finished = finished

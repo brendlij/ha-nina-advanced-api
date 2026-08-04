@@ -2,45 +2,95 @@
   "config": {
     "step": {
       "user": {
-        "description": "Verbindung zur N.I.N.A. Advanced API herstellen. Das Plugin muss in N.I.N.A. unter Optionen aktiviert sein.",
+        "description": "Connect to the N.I.N.A. Advanced API. The plugin must be enabled in N.I.N.A. under Options.",
         "data": {
-          "host": "Host / IP-Adresse",
+          "host": "Host / IP address",
           "port": "Port"
         }
       }
     },
     "error": {
-      "cannot_connect": "Verbindung zu N.I.N.A. fehlgeschlagen. Ist die Advanced API aktiviert und Host/Port korrekt?",
-      "not_nina_api": "Auf diesem Host und Port antwortet etwas, aber es ist nicht die N.I.N.A. Advanced API. Bitte den im Plugin eingestellten Port prüfen (Standard 1888).",
-      "invalid_response": "N.I.N.A. hat geantwortet, meldet aber einen Fehler. Details stehen im Home-Assistant-Log.",
-      "unknown": "Unerwarteter Fehler"
+      "cannot_connect": "Failed to connect to N.I.N.A. Is the Advanced API enabled and host/port correct?",
+      "not_nina_api": "Something is listening on that host and port, but it is not the N.I.N.A. Advanced API. Check the port configured in the plugin (default 1888).",
+      "invalid_response": "N.I.N.A. answered but reported an error. Check the Home Assistant log for details.",
+      "unknown": "Unexpected error"
     },
     "abort": {
-      "already_configured": "Dieses Gerät ist bereits konfiguriert"
+      "already_configured": "This device is already configured"
     }
   },
   "entity": {
     "binary_sensor": {
-      "application_connected": { "name": "Verbunden" },
-      "mount_connected": { "name": "Verbunden" },
+      "application_connected": { "name": "Connected" },
+      "mount_connected": { "name": "Connected" },
       "mount_tracking": { "name": "Tracking" },
-      "mount_parked": { "name": "Geparkt" },
-      "mount_slewing": { "name": "Schwenkt" },
-      "camera_connected": { "name": "Verbunden" },
-      "camera_cooling": { "name": "Kühlung aktiv" }
+      "mount_parked": { "name": "Parked" },
+      "mount_at_home": { "name": "At home position" },
+      "mount_slewing": { "name": "Slewing" },
+      "mount_pulse_guiding": { "name": "Pulse guiding" },
+      "camera_connected": { "name": "Connected" },
+      "camera_cooling": { "name": "Cooling active" },
+      "camera_at_target_temp": { "name": "At target temperature" },
+      "camera_exposing": { "name": "Exposing" },
+      "camera_dew_heater": { "name": "Dew heater" },
+      "sequence_running": { "name": "Running" },
+      "sequence_loaded": { "name": "Loaded" }
     },
     "sensor": {
-      "mount_ra": { "name": "Rektaszension" },
-      "mount_dec": { "name": "Deklination" },
-      "mount_altitude": { "name": "Höhe" },
-      "mount_azimuth": { "name": "Azimut" },
-      "camera_temperature": { "name": "Temperatur" },
-      "camera_cooler_power": { "name": "Kühlerleistung" }
+      "nina_version": { "name": "N.I.N.A. version" },
+      "api_version": { "name": "API version" },
+      "mount_ra": { "name": "Right ascension" },
+      "mount_dec": { "name": "Declination" },
+      "mount_altitude": { "name": "Altitude" },
+      "mount_azimuth": { "name": "Azimuth" },
+      "mount_sidereal_time": { "name": "Sidereal time" },
+      "mount_time_to_meridian_flip": { "name": "Time to meridian flip" },
+      "mount_side_of_pier": { "name": "Side of pier" },
+      "mount_name": { "name": "Device" },
+      "camera_temperature": { "name": "Temperature" },
+      "camera_target_temperature": { "name": "Target temperature" },
+      "camera_cooler_power": { "name": "Cooler power" },
+      "camera_state": { "name": "State" },
+      "camera_gain": { "name": "Gain" },
+      "camera_offset": { "name": "Offset" },
+      "camera_binning": { "name": "Binning" },
+      "camera_last_download_time": { "name": "Last download time" },
+      "camera_name": { "name": "Device" },
+      "sequence_current_item": { "name": "Current step" },
+      "sequence_progress": { "name": "Progress" }
     },
     "button": {
-      "mount_park": { "name": "Parken" },
-      "mount_unpark": { "name": "Entparken" },
-      "mount_home": { "name": "Home-Position anfahren" }
+      "mount_park": { "name": "Park" },
+      "mount_unpark": { "name": "Unpark" },
+      "mount_home": { "name": "Slew to home" },
+      "mount_flip": { "name": "Meridian flip" },
+      "mount_stop_slew": { "name": "Stop slew" },
+      "mount_set_park_position": { "name": "Set park position" },
+      "camera_abort_exposure": { "name": "Abort exposure" },
+      "camera_cancel_cooling": { "name": "Cancel cooling" },
+      "sequence_start": { "name": "Start sequence" },
+      "sequence_stop": { "name": "Stop sequence" },
+      "sequence_reset": { "name": "Reset sequence" },
+      "sequence_skip_current": { "name": "Skip current step" },
+      "sequence_skip_to_imaging": { "name": "Skip to imaging" },
+      "sequence_skip_to_end": { "name": "Skip to end" }
+    },
+    "switch": {
+      "camera_cooler": { "name": "Cooler" },
+      "camera_dew_heater": { "name": "Dew heater" },
+      "mount_tracking": { "name": "Tracking" }
+    },
+    "select": {
+      "mount_tracking_mode": {
+        "name": "Tracking mode",
+        "state": {
+          "sidereal": "Sidereal",
+          "lunar": "Lunar",
+          "solar": "Solar",
+          "king": "King",
+          "stopped": "Stopped"
+        }
+      }
     }
   }
 }

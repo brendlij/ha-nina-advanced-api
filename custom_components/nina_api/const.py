@@ -28,7 +28,47 @@ WS_RECONNECT_DELAY_MAX = 60  # seconds
 DEVICE_APPLICATION = "application"
 DEVICE_MOUNT = "mount"
 DEVICE_CAMERA = "camera"
+DEVICE_SEQUENCE = "sequence"
 
 # -- Equipment connection states as reported by NINA ---------------------
 # (used to normalize the "Connected" boolean across equipment endpoints)
 KEY_CONNECTED = "Connected"
+
+# -- NINA enums ----------------------------------------------------------
+# The API serializes enums as integers (no JsonStringEnumConverter is
+# registered), so these maps turn them back into readable states.
+# Source: NINA.Equipment/Interfaces/ITelescope.cs
+TRACKING_MODES: dict[int, str] = {
+    0: "sidereal",
+    1: "lunar",
+    2: "solar",
+    3: "king",
+    4: "custom",
+    5: "stopped",
+}
+TRACKING_MODE_TO_INT = {v: k for k, v in TRACKING_MODES.items()}
+
+# Modes offered as a select; "custom" is excluded because it needs
+# explicit RA/Dec rates that the select cannot supply.
+TRACKING_MODE_OPTIONS = ["sidereal", "lunar", "solar", "king", "stopped"]
+
+# Source: NINA.Core/Enum/CameraStates.cs
+CAMERA_STATES: dict[int, str] = {
+    -1: "no_state",
+    0: "idle",
+    1: "waiting",
+    2: "exposing",
+    3: "reading",
+    4: "download",
+    5: "error",
+    100: "loading_file",
+}
+
+# Sequence item/trigger/condition states, already serialized as strings
+# by the plugin (SequenceEntityStatus.ToString()).
+SEQUENCE_STATUS_RUNNING = "RUNNING"
+
+# -- Sequence skip targets (SequenceSkipType) ---------------------------
+SKIP_CURRENT_ITEMS = "CurrentItems"
+SKIP_TO_END = "ToEnd"
+SKIP_TO_IMAGING = "ToImaging"

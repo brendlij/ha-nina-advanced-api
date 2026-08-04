@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import NinaConfigEntry
-from .const import DEVICE_APPLICATION, DEVICE_CAMERA, DEVICE_MOUNT
+from .const import DEVICE_APPLICATION, DEVICE_CAMERA, DEVICE_MOUNT, DEVICE_SEQUENCE
 from .coordinator import NinaData, NinaDataUpdateCoordinator
 from .entity import NinaEntity
 
@@ -52,10 +52,22 @@ MOUNT_SENSORS: tuple[NinaBinarySensorEntityDescription, ...] = (
         value_fn=lambda d: d.mount.get("AtPark"),
     ),
     NinaBinarySensorEntityDescription(
+        key="mount_at_home",
+        translation_key="mount_at_home",
+        icon="mdi:home-import-outline",
+        value_fn=lambda d: d.mount.get("AtHome"),
+    ),
+    NinaBinarySensorEntityDescription(
         key="mount_slewing",
         translation_key="mount_slewing",
         icon="mdi:rotate-3d-variant",
         value_fn=lambda d: d.mount.get("Slewing"),
+    ),
+    NinaBinarySensorEntityDescription(
+        key="mount_pulse_guiding",
+        translation_key="mount_pulse_guiding",
+        icon="mdi:crosshairs-gps",
+        value_fn=lambda d: d.mount.get("IsPulseGuiding"),
     ),
 )
 
@@ -72,6 +84,39 @@ CAMERA_SENSORS: tuple[NinaBinarySensorEntityDescription, ...] = (
         icon="mdi:snowflake",
         value_fn=lambda d: d.camera.get("CoolerOn"),
     ),
+    NinaBinarySensorEntityDescription(
+        key="camera_at_target_temp",
+        translation_key="camera_at_target_temp",
+        icon="mdi:thermometer-check",
+        value_fn=lambda d: d.camera.get("AtTargetTemp"),
+    ),
+    NinaBinarySensorEntityDescription(
+        key="camera_exposing",
+        translation_key="camera_exposing",
+        icon="mdi:camera-timer",
+        value_fn=lambda d: d.camera.get("IsExposing"),
+    ),
+    NinaBinarySensorEntityDescription(
+        key="camera_dew_heater",
+        translation_key="camera_dew_heater",
+        icon="mdi:heat-wave",
+        value_fn=lambda d: d.camera.get("DewHeaterOn"),
+    ),
+)
+
+SEQUENCE_SENSORS: tuple[NinaBinarySensorEntityDescription, ...] = (
+    NinaBinarySensorEntityDescription(
+        key="sequence_running",
+        translation_key="sequence_running",
+        device_class=BinarySensorDeviceClass.RUNNING,
+        value_fn=lambda d: d.sequence_running,
+    ),
+    NinaBinarySensorEntityDescription(
+        key="sequence_loaded",
+        translation_key="sequence_loaded",
+        icon="mdi:playlist-check",
+        value_fn=lambda d: d.sequence_loaded,
+    ),
 )
 
 
@@ -81,21 +126,17 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator = entry.runtime_data
-    entities: list[NinaBinarySensor] = (
-        [
-            NinaBinarySensor(coordinator, DEVICE_APPLICATION, "N.I.N.A.", description)
-            for description in APPLICATION_SENSORS
-        ]
-        + [
-            NinaBinarySensor(coordinator, DEVICE_MOUNT, "Mount", description)
-            for description in MOUNT_SENSORS
-        ]
-        + [
-            NinaBinarySensor(coordinator, DEVICE_CAMERA, "Kamera", description)
-            for description in CAMERA_SENSORS
-        ]
+    groups = (
+        (DEVICE_APPLICATION, "N.I.N.A.", APPLICATION_SENSORS),
+        (DEVICE_MOUNT, "Mount", MOUNT_SENSORS),
+        (DEVICE_CAMERA, "Camera", CAMERA_SENSORS),
+        (DEVICE_SEQUENCE, "Sequence", SEQUENCE_SENSORS),
     )
-    async_add_entities(entities)
+    async_add_entities(
+        NinaBinarySensor(coordinator, device_key, device_name, description)
+        for device_key, device_name, descriptions in groups
+        for description in descriptions
+    )
 
 
 class NinaBinarySensor(NinaEntity, BinarySensorEntity):
