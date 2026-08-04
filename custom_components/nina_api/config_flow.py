@@ -9,7 +9,12 @@ from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .api import NinaApiClient, NinaApiConnectionError, NinaApiError
+from .api import (
+    NinaApiClient,
+    NinaApiConnectionError,
+    NinaApiError,
+    NinaApiNotFoundError,
+)
 from .const import DEFAULT_NAME, DEFAULT_PORT, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -43,17 +48,24 @@ class NinaApiConfigFlow(ConfigFlow, domain=DOMAIN):
             )
 
             try:
-                await client.get_application_info()
-            except NinaApiConnectionError:
+                version = await client.get_api_version()
+            except NinaApiConnectionError as err:
+                _LOGGER.debug("Cannot reach NINA: %s", err)
                 errors["base"] = "cannot_connect"
-            except NinaApiError:
-                # Reachable, but NINA reported an application error (e.g.
-                # the Advanced API plugin is installed but disabled).
-                errors["base"] = "cannot_connect"
+            except NinaApiNotFoundError as err:
+                # Something is listening, but it isn't the Advanced API -
+                # usually the wrong port or a different web service.
+                _LOGGER.debug("Wrong endpoint for NINA: %s", err)
+                errors["base"] = "not_nina_api"
+            except NinaApiError as err:
+                # Reachable and the right service, but it reported an error.
+                _LOGGER.debug("NINA reported an error: %s", err)
+                errors["base"] = "invalid_response"
             except Exception:  # noqa: BLE001
                 _LOGGER.exception("Unexpected error validating NINA connection")
                 errors["base"] = "unknown"
             else:
+                _LOGGER.debug("Connected to NINA Advanced API version %s", version)
                 return self.async_create_entry(
                     title=DEFAULT_NAME,
                     data={

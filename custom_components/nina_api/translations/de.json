@@ -11,6 +11,8 @@
     },
     "error": {
       "cannot_connect": "Verbindung zu N.I.N.A. fehlgeschlagen. Ist die Advanced API aktiviert und Host/Port korrekt?",
+      "not_nina_api": "Auf diesem Host und Port antwortet etwas, aber es ist nicht die N.I.N.A. Advanced API. Bitte den im Plugin eingestellten Port prüfen (Standard 1888).",
+      "invalid_response": "N.I.N.A. hat geantwortet, meldet aber einen Fehler. Details stehen im Home-Assistant-Log.",
       "unknown": "Unerwarteter Fehler"
     },
     "abort": {

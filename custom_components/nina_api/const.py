@@ -13,6 +13,8 @@ DEFAULT_NAME = "N.I.N.A."
 
 # -- API -----------------------------------------------------------------
 API_BASE_PATH = "v2/api"
+# The websocket modules are mounted next to the REST API, not under it.
+WS_PATH = "v2/socket"
 API_TIMEOUT = 10  # seconds
 
 # Polling fallback interval; the websocket pushes updates in between.

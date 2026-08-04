@@ -11,6 +11,8 @@
     },
     "error": {
       "cannot_connect": "Failed to connect to N.I.N.A. Is the Advanced API enabled and host/port correct?",
+      "not_nina_api": "Something is listening on that host and port, but it is not the N.I.N.A. Advanced API. Check the port configured in the plugin (default 1888).",
+      "invalid_response": "N.I.N.A. answered but reported an error. Check the Home Assistant log for details.",
       "unknown": "Unexpected error"
     },
     "abort": {

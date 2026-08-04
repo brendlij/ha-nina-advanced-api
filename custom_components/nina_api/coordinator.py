@@ -54,14 +54,14 @@ class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
         data = NinaData()
 
         try:
-            await self.client.get_application_info()
+            await self.client.get_api_version()
             data.application_connected = True
         except NinaApiConnectionError as err:
             # NINA itself isn't reachable at all -> whole entry is unavailable.
             raise UpdateFailed(f"NINA not reachable: {err}") from err
         except NinaApiError as err:
             # Reachable but reported an error -> keep entry alive, just log it.
-            _LOGGER.debug("application/info returned an error: %s", err)
+            _LOGGER.debug("version endpoint returned an error: %s", err)
 
         # Equipment can be legitimately "not connected" in NINA (e.g. mount
         # powered off) without that being a coordinator-level failure, so

@@ -12,7 +12,7 @@ from typing import Any
 
 import aiohttp
 
-from .const import API_BASE_PATH, API_TIMEOUT
+from .const import API_BASE_PATH, API_TIMEOUT, WS_PATH
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -23,6 +23,15 @@ class NinaApiError(Exception):
 
 class NinaApiConnectionError(NinaApiError):
     """Raised when the NINA instance cannot be reached."""
+
+
+class NinaApiNotFoundError(NinaApiError):
+    """Raised when something answers on host:port but isn't the Advanced API.
+
+    A 404 on a known-good endpoint means we're talking to some other web
+    server (or a NINA API version that predates the endpoint), which is a
+    very different problem from "nothing is listening".
+    """
 
 
 class NinaApiResponseError(NinaApiError):
@@ -57,7 +66,8 @@ class NinaApiClient:
 
     @property
     def websocket_url(self) -> str:
-        return f"ws://{self._host}:{self._port}/{API_BASE_PATH}/socket"
+        # The socket module is mounted at /v2/socket, *not* under /v2/api.
+        return f"ws://{self._host}:{self._port}/{WS_PATH}"
 
     async def _request(
         self,
@@ -67,6 +77,7 @@ class NinaApiClient:
     ) -> Any:
         """Perform a request and unwrap NINA's standard envelope."""
         url = f"{self.base_url}/{path.lstrip('/')}"
+        _LOGGER.debug("NINA request: %s %s params=%s", method, url, params)
         try:
             async with self._session.request(
                 method,
@@ -74,22 +85,32 @@ class NinaApiClient:
                 params=params,
                 timeout=aiohttp.ClientTimeout(total=API_TIMEOUT),
             ) as resp:
-                # NINA returns 200 even for some application errors, but
-                # be defensive about transport-level HTTP errors too.
+                # The Advanced API always answers HTTP 200 and signals
+                # application errors inside the envelope, so any non-200 here
+                # means we are not talking to the API we think we are.
                 resp.raise_for_status()
                 data = await resp.json(content_type=None)
+        except aiohttp.ClientResponseError as err:
+            if err.status == 404:
+                raise NinaApiNotFoundError(
+                    f"{url} returned 404 - host:port does not look like the "
+                    "N.I.N.A. Advanced API"
+                ) from err
+            raise NinaApiError(f"HTTP {err.status} from NINA for {url}") from err
         except aiohttp.ClientConnectionError as err:
             raise NinaApiConnectionError(
-                f"Cannot connect to NINA at {self._host}:{self._port}"
+                f"Cannot connect to NINA at {self._host}:{self._port}: {err}"
             ) from err
         except TimeoutError as err:
             raise NinaApiConnectionError(
                 f"Timeout connecting to NINA at {self._host}:{self._port}"
             ) from err
-        except aiohttp.ClientResponseError as err:
-            raise NinaApiError(f"HTTP error from NINA: {err.status}") from err
-        except (ValueError, aiohttp.ContentTypeError) as err:
-            raise NinaApiError("Invalid JSON response from NINA") from err
+        except aiohttp.ClientError as err:
+            raise NinaApiConnectionError(
+                f"Transport error talking to NINA at {self._host}:{self._port}: {err}"
+            ) from err
+        except ValueError as err:
+            raise NinaApiError(f"Invalid JSON response from NINA for {url}") from err
 
         if not isinstance(data, dict):
             raise NinaApiError(f"Unexpected response shape from NINA: {data!r}")
@@ -104,12 +125,23 @@ class NinaApiClient:
 
     # -- Application / connection status ---------------------------------
 
-    async def get_application_info(self) -> Any:
-        """Basic reachability + version check.
+    async def get_api_version(self) -> Any:
+        """Return the Advanced API plugin version.
 
-        Used both by config_flow validation and the coordinator.
+        This is the cheapest endpoint that exists on every build, so it is
+        the reachability probe used by config_flow and the coordinator.
         """
-        return await self._request("GET", "application/info")
+        return await self._request("GET", "version")
+
+    async def get_nina_version(self, friendly: bool = True) -> Any:
+        """Return the N.I.N.A. version string itself."""
+        return await self._request(
+            "GET", "version/nina", params={"friendly": str(friendly).lower()}
+        )
+
+    async def get_equipment_info(self) -> Any:
+        """Return connection state for every device in one call."""
+        return await self._request("GET", "equipment/info")
 
     # -- Mount -------------------------------------------------------------
 
@@ -148,7 +180,24 @@ class NinaApiClient:
     async def camera_disconnect(self) -> Any:
         return await self._request("GET", "equipment/camera/disconnect")
 
-    async def camera_set_cooler(self, on: bool) -> Any:
+    async def camera_cool(self, temperature: float, minutes: float = 0) -> Any:
+        """Cool down to `temperature` over `minutes` (0 = as fast as possible)."""
         return await self._request(
-            "GET", "equipment/camera/cool", params={"power": "on" if on else "off"}
+            "GET",
+            "equipment/camera/cool",
+            params={"temperature": temperature, "minutes": minutes, "cancel": "false"},
+        )
+
+    async def camera_warm(self, minutes: float = 0) -> Any:
+        """Warm the sensor back up over `minutes`."""
+        return await self._request(
+            "GET",
+            "equipment/camera/warm",
+            params={"minutes": minutes, "cancel": "false"},
+        )
+
+    async def camera_cancel_cooling(self) -> Any:
+        """Abort a running cool/warm cycle."""
+        return await self._request(
+            "GET", "equipment/camera/warm", params={"cancel": "true", "minutes": 0}
         )
