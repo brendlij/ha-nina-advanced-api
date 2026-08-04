@@ -21,6 +21,10 @@ from .entity import NinaEntity
 @dataclass(frozen=True, kw_only=True)
 class NinaBinarySensorEntityDescription(BinarySensorEntityDescription):
     value_fn: Callable[[NinaData], bool | None]
+    # A sensor whose whole job is reporting the connection cannot go
+    # unavailable when the connection drops - it has to stay readable to
+    # report "off".
+    available_when_disconnected: bool = False
 
 
 APPLICATION_SENSORS: tuple[NinaBinarySensorEntityDescription, ...] = (
@@ -29,6 +33,7 @@ APPLICATION_SENSORS: tuple[NinaBinarySensorEntityDescription, ...] = (
         translation_key="application_connected",
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
         value_fn=lambda d: d.application_connected,
+        available_when_disconnected=True,
     ),
 )
 
@@ -153,6 +158,12 @@ class NinaBinarySensor(NinaEntity, BinarySensorEntity):
     ) -> None:
         super().__init__(coordinator, device_key, device_name, description.key)
         self.entity_description = description
+
+    @property
+    def available(self) -> bool:
+        if self.entity_description.available_when_disconnected:
+            return self.coordinator.last_update_success
+        return super().available
 
     @property
     def is_on(self) -> bool | None:

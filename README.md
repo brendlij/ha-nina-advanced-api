@@ -18,11 +18,14 @@ Covered so far:
 - **Sequence**: running/loaded, current step, progress in percent,
   start/stop/reset/skip buttons
 
+N.I.N.A. does not have to be running. When it is closed the entities stay in
+place and read as unavailable, and `binary_sensor` "Connected" goes to `off` —
+usable as an automation trigger for "N.I.N.A. just started".
+
 Planned (v0.2+):
 
-- WebSocket listener for live push instead of pure 30s polling
+- WebSocket listener for live push instead of polling
 - Filter wheel, focuser, rotator, dome/roof, guider, safety monitor, flat panel
-- Options flow (poll interval)
 - Diagnostics export
 
 ## Requirements
@@ -39,6 +42,16 @@ Planned (v0.2+):
 3. Install "N.I.N.A. Advanced API", restart Home Assistant
 4. Settings → Devices & services → Add integration → "N.I.N.A. Advanced API"
 5. Enter host/IP and port (default 1888)
+
+## Changing settings later
+
+**Host / IP / port** — Settings → Devices & services → N.I.N.A. Advanced API →
+⋮ → **Reconfigure**. The new address is validated before it is saved, and the
+entry is updated in place, so entity IDs, history and dashboard cards survive
+the move.
+
+**Polling interval** — same menu → **Configure**. Default 30s, range 5–3600s.
+The integration reloads itself so the change takes effect immediately.
 
 ## Troubleshooting
 

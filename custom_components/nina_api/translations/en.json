@@ -7,16 +7,35 @@
           "host": "Host / IP address",
           "port": "Port"
         }
+      },
+      "reconfigure": {
+        "description": "Change where this N.I.N.A. instance is reached. Entities, history and dashboards are kept.",
+        "data": {
+          "host": "Host / IP address",
+          "port": "Port"
+        }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect to N.I.N.A. Is the Advanced API enabled and host/port correct?",
       "not_nina_api": "Something is listening on that host and port, but it is not the N.I.N.A. Advanced API. Check the port configured in the plugin (default 1888).",
       "invalid_response": "N.I.N.A. answered but reported an error. Check the Home Assistant log for details.",
+      "already_configured": "Another entry already uses this host and port",
       "unknown": "Unexpected error"
     },
     "abort": {
-      "already_configured": "This device is already configured"
+      "already_configured": "This device is already configured",
+      "reconfigure_successful": "Connection settings updated"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "description": "How often Home Assistant polls N.I.N.A. Lower values react faster but create more load.",
+        "data": {
+          "scan_interval": "Polling interval"
+        }
+      }
     }
   },
   "entity": {

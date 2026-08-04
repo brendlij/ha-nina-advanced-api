@@ -1,8 +1,6 @@
 """Constants for the N.I.N.A. Advanced API integration."""
 from __future__ import annotations
 
-from datetime import timedelta
-
 DOMAIN = "nina_api"
 MANUFACTURER = "N.I.N.A. / Christian Palm (Advanced API)"
 
@@ -17,8 +15,11 @@ API_BASE_PATH = "v2/api"
 WS_PATH = "v2/socket"
 API_TIMEOUT = 10  # seconds
 
-# Polling fallback interval; the websocket pushes updates in between.
-UPDATE_INTERVAL = timedelta(seconds=30)
+# Polling interval, adjustable per config entry via the options flow
+# (CONF_SCAN_INTERVAL is reused from homeassistant.const).
+DEFAULT_SCAN_INTERVAL = 30  # seconds
+MIN_SCAN_INTERVAL = 5
+MAX_SCAN_INTERVAL = 3600
 
 # Reconnect backoff for the websocket listener
 WS_RECONNECT_DELAY = 5  # seconds

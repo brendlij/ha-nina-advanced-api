@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .api import (
     NinaApiClient,
@@ -20,7 +22,7 @@ from .api import (
     NinaApiError,
     NinaApiResponseError,
 )
-from .const import DOMAIN, SEQUENCE_STATUS_RUNNING, UPDATE_INTERVAL
+from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, SEQUENCE_STATUS_RUNNING
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -110,7 +112,11 @@ class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
             _LOGGER,
             name=DOMAIN,
             config_entry=config_entry,
-            update_interval=UPDATE_INTERVAL,
+            update_interval=timedelta(
+                seconds=config_entry.options.get(
+                    CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                )
+            ),
         )
         self.client = client
         # The NINA version cannot change while the app is running, so it is
@@ -120,17 +126,30 @@ class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
     async def _async_update_data(self) -> NinaData:
         data = NinaData()
 
+        # A closed N.I.N.A. is the normal daytime state of an imaging rig,
+        # not an error. Reporting it as a failed update would tear the whole
+        # config entry down, and Home Assistant would then drop every entity
+        # ("no longer being provided by the integration") until NINA comes
+        # back. Instead the refresh succeeds with application_connected
+        # False, so the entities stay registered and simply read as
+        # unavailable - and the connectivity sensor stays usable as a
+        # trigger for "NINA just started".
         try:
             data.api_version = await self.client.get_api_version()
-            data.application_connected = True
         except NinaApiConnectionError as err:
-            # NINA itself isn't reachable at all -> whole entry is unavailable.
-            raise UpdateFailed(f"NINA not reachable: {err}") from err
+            _LOGGER.debug("NINA not reachable (is it running?): %s", err)
+            # NINA may well be updated before it comes back, so re-read the
+            # version on the next successful connection.
+            self._nina_version = None
+            return data
         except NinaApiError as err:
-            # Reachable but reported an error -> keep entry alive, just log it.
+            # Reachable, but not answering like the Advanced API should.
             _LOGGER.debug("version endpoint returned an error: %s", err)
+            return data
 
-        if self._nina_version is None and data.application_connected:
+        data.application_connected = True
+
+        if self._nina_version is None:
             try:
                 self._nina_version = await self.client.get_nina_version()
             except NinaApiError as err:

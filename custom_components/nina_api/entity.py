@@ -29,3 +29,19 @@ class NinaEntity(CoordinatorEntity[NinaDataUpdateCoordinator]):
             manufacturer=MANUFACTURER,
             via_device=(DOMAIN, entry_id),
         )
+
+    @property
+    def available(self) -> bool:
+        """Entities read as unavailable while N.I.N.A. is not answering.
+
+        The coordinator deliberately keeps succeeding when NINA is closed
+        (see NinaDataUpdateCoordinator._async_update_data), so availability
+        hangs off the connection flag rather than last_update_success. That
+        way the entities stay in the registry across a NINA restart instead
+        of disappearing from it.
+        """
+        return (
+            super().available
+            and self.coordinator.data is not None
+            and self.coordinator.data.application_connected
+        )
