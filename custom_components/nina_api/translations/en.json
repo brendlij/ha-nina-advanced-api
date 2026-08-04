@@ -1,0 +1,44 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Connect to the N.I.N.A. Advanced API. The plugin must be enabled in N.I.N.A. under Options.",
+        "data": {
+          "host": "Host / IP address",
+          "port": "Port"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to N.I.N.A. Is the Advanced API enabled and host/port correct?",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This device is already configured"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "application_connected": { "name": "Connected" },
+      "mount_connected": { "name": "Connected" },
+      "mount_tracking": { "name": "Tracking" },
+      "mount_parked": { "name": "Parked" },
+      "mount_slewing": { "name": "Slewing" },
+      "camera_connected": { "name": "Connected" },
+      "camera_cooling": { "name": "Cooling active" }
+    },
+    "sensor": {
+      "mount_ra": { "name": "Right ascension" },
+      "mount_dec": { "name": "Declination" },
+      "mount_altitude": { "name": "Altitude" },
+      "mount_azimuth": { "name": "Azimuth" },
+      "camera_temperature": { "name": "Temperature" },
+      "camera_cooler_power": { "name": "Cooler power" }
+    },
+    "button": {
+      "mount_park": { "name": "Park" },
+      "mount_unpark": { "name": "Unpark" },
+      "mount_home": { "name": "Slew to home" }
+    }
+  }
+}

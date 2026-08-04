@@ -1,0 +1,12 @@
+{
+  "domain": "nina_api",
+  "name": "N.I.N.A. Advanced API",
+  "codeowners": ["@julian"],
+  "config_flow": true,
+  "documentation": "https://github.com/julian/ha-nina-advanced-api",
+  "issue_tracker": "https://github.com/julian/ha-nina-advanced-api/issues",
+  "integration_type": "hub",
+  "iot_class": "local_push",
+  "requirements": [],
+  "version": "0.1.0"
+}

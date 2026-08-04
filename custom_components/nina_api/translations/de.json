@@ -1,0 +1,44 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Verbindung zur N.I.N.A. Advanced API herstellen. Das Plugin muss in N.I.N.A. unter Optionen aktiviert sein.",
+        "data": {
+          "host": "Host / IP-Adresse",
+          "port": "Port"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zu N.I.N.A. fehlgeschlagen. Ist die Advanced API aktiviert und Host/Port korrekt?",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "abort": {
+      "already_configured": "Dieses Gerät ist bereits konfiguriert"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "application_connected": { "name": "Verbunden" },
+      "mount_connected": { "name": "Verbunden" },
+      "mount_tracking": { "name": "Tracking" },
+      "mount_parked": { "name": "Geparkt" },
+      "mount_slewing": { "name": "Schwenkt" },
+      "camera_connected": { "name": "Verbunden" },
+      "camera_cooling": { "name": "Kühlung aktiv" }
+    },
+    "sensor": {
+      "mount_ra": { "name": "Rektaszension" },
+      "mount_dec": { "name": "Deklination" },
+      "mount_altitude": { "name": "Höhe" },
+      "mount_azimuth": { "name": "Azimut" },
+      "camera_temperature": { "name": "Temperatur" },
+      "camera_cooler_power": { "name": "Kühlerleistung" }
+    },
+    "button": {
+      "mount_park": { "name": "Parken" },
+      "mount_unpark": { "name": "Entparken" },
+      "mount_home": { "name": "Home-Position anfahren" }
+    }
+  }
+}
