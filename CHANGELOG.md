@@ -5,7 +5,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.1] — 2026-09-20
+
+### Fixed
+
+- Detect running sequences independently of instruction names. Smart Exposure
+  reports unnamed internal instructions, which previously appeared inactive.
+- Show the parent instruction name for unnamed active steps.
+- Recognize running containers between instructions, including empty containers,
+  while keeping progress limited to leaf instructions.
+
+The WebSocket improvements below were already present on main and are included
+  in this release.
+
 
 ### Added
 

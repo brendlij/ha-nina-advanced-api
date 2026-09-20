@@ -22,7 +22,8 @@ from .api import (
     NinaApiError,
     NinaApiResponseError,
 )
-from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, SEQUENCE_STATUS_RUNNING
+from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from .sequence import summarize_sequence
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,42 +59,6 @@ class NinaData:
         return round(
             100 * self.sequence_items_finished / self.sequence_items_total, 1
         )
-
-
-def _walk_sequence(items: list[Any]) -> tuple[str | None, int, int]:
-    """Flatten the sequence tree into (running item name, total, finished).
-
-    Only leaf items are counted - containers just carry the status of
-    whatever is inside them, so counting them would double-count progress.
-    The deepest RUNNING leaf wins, which is the instruction NINA is
-    actually executing right now.
-    """
-    running: str | None = None
-    total = 0
-    finished = 0
-
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-
-        children = item.get("Items")
-        if isinstance(children, list):
-            child_running, child_total, child_finished = _walk_sequence(children)
-            total += child_total
-            finished += child_finished
-            if child_running is not None:
-                running = child_running
-            continue
-
-        # Leaf instruction
-        status = item.get("Status")
-        total += 1
-        if status in ("FINISHED", "SKIPPED"):
-            finished += 1
-        elif status == SEQUENCE_STATUS_RUNNING and running is None:
-            running = item.get("Name")
-
-    return running, total, finished
 
 
 class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
@@ -197,9 +162,9 @@ class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
             for item in state
             if isinstance(item, dict) and "GlobalTriggers" not in item
         ]
-        running, total, finished = _walk_sequence(containers)
+        summary = summarize_sequence(containers)
 
-        data.sequence_current_item = running
-        data.sequence_running = running is not None
-        data.sequence_items_total = total
-        data.sequence_items_finished = finished
+        data.sequence_current_item = summary.current_item
+        data.sequence_running = summary.running
+        data.sequence_items_total = summary.total
+        data.sequence_items_finished = summary.finished
