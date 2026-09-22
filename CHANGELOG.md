@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The thirteen last-frame sensors have names again. Every one declared a
+  translation key and `strings.json` carried them all, but `translations/en.json`
+  carried none — and that is the file Home Assistant reads at runtime, so they
+  all fell back to the device name and arrived as "Last image 2" through
+  "Last image 10".
 - The coordinator no longer carries an unresolved stash conflict, which left
   the module with markers in it and unable to import.
 - The changelog is valid UTF-8 again; one byte was cp1252 and rendered as a

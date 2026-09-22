@@ -155,6 +155,45 @@
       },
       "sequence_progress": {
         "name": "Progress"
+      },
+      "image_hfr": {
+        "name": "HFR"
+      },
+      "image_stars": {
+        "name": "Stars"
+      },
+      "image_filter": {
+        "name": "Filter"
+      },
+      "image_exposure_time": {
+        "name": "Exposure time"
+      },
+      "image_target": {
+        "name": "Target"
+      },
+      "image_date": {
+        "name": "Captured"
+      },
+      "image_guiding_rms": {
+        "name": "Guiding RMS"
+      },
+      "image_hfr_std_dev": {
+        "name": "HFR standard deviation"
+      },
+      "image_mean": {
+        "name": "Mean"
+      },
+      "image_median": {
+        "name": "Median"
+      },
+      "image_temperature": {
+        "name": "Sensor temperature"
+      },
+      "image_type": {
+        "name": "Image type"
+      },
+      "image_filename": {
+        "name": "File name"
       }
     },
     "button": {
