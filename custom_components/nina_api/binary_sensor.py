@@ -13,7 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import NinaConfigEntry
-from .const import DEVICE_APPLICATION, DEVICE_CAMERA, DEVICE_MOUNT, DEVICE_SEQUENCE
+from .const import DEVICE_APPLICATION, DEVICE_CAMERA, DEVICE_MOUNT, DEVICE_NAMES, DEVICE_SEQUENCE
 from .coordinator import NinaData, NinaDataUpdateCoordinator
 from .entity import NinaEntity
 
@@ -132,10 +132,10 @@ async def async_setup_entry(
 ) -> None:
     coordinator = entry.runtime_data
     groups = (
-        (DEVICE_APPLICATION, "N.I.N.A.", APPLICATION_SENSORS),
-        (DEVICE_MOUNT, "Mount", MOUNT_SENSORS),
-        (DEVICE_CAMERA, "Camera", CAMERA_SENSORS),
-        (DEVICE_SEQUENCE, "Sequence", SEQUENCE_SENSORS),
+        (DEVICE_APPLICATION, DEVICE_NAMES[DEVICE_APPLICATION], APPLICATION_SENSORS),
+        (DEVICE_MOUNT, DEVICE_NAMES[DEVICE_MOUNT], MOUNT_SENSORS),
+        (DEVICE_CAMERA, DEVICE_NAMES[DEVICE_CAMERA], CAMERA_SENSORS),
+        (DEVICE_SEQUENCE, DEVICE_NAMES[DEVICE_SEQUENCE], SEQUENCE_SENSORS),
     )
     async_add_entities(
         NinaBinarySensor(coordinator, device_key, device_name, description)

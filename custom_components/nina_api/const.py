@@ -51,6 +51,19 @@ DEVICE_SEQUENCE = "sequence"
 # current state.
 DEVICE_LAST_IMAGE = "last_image"
 
+# Display names for the devices. With has_entity_name, Home Assistant builds
+# every entity_id from the device name plus the entity name, so these decide
+# whether an id reads as sensor.nina_camera_temperature or the far more
+# ambiguous sensor.camera_temperature. The prefix is spelled without dots on
+# purpose: "N.I.N.A." slugifies to n_i_n_a.
+DEVICE_NAMES = {
+    DEVICE_APPLICATION: "NINA",
+    DEVICE_MOUNT: "NINA Mount",
+    DEVICE_CAMERA: "NINA Camera",
+    DEVICE_SEQUENCE: "NINA Sequence",
+    DEVICE_LAST_IMAGE: "NINA Last Image",
+}
+
 # -- Equipment connection states as reported by NINA ---------------------
 # (used to normalize the "Connected" boolean across equipment endpoints)
 KEY_CONNECTED = "Connected"

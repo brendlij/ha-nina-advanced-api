@@ -14,6 +14,7 @@ from .api import NinaApiClient, NinaApiError
 from .const import (
     DEVICE_CAMERA,
     DEVICE_MOUNT,
+    DEVICE_NAMES,
     DEVICE_SEQUENCE,
     SKIP_CURRENT_ITEMS,
     SKIP_TO_END,
@@ -129,9 +130,9 @@ async def async_setup_entry(
 ) -> None:
     coordinator = entry.runtime_data
     groups = (
-        (DEVICE_MOUNT, "Mount", MOUNT_BUTTONS),
-        (DEVICE_CAMERA, "Camera", CAMERA_BUTTONS),
-        (DEVICE_SEQUENCE, "Sequence", SEQUENCE_BUTTONS),
+        (DEVICE_MOUNT, DEVICE_NAMES[DEVICE_MOUNT], MOUNT_BUTTONS),
+        (DEVICE_CAMERA, DEVICE_NAMES[DEVICE_CAMERA], CAMERA_BUTTONS),
+        (DEVICE_SEQUENCE, DEVICE_NAMES[DEVICE_SEQUENCE], SEQUENCE_BUTTONS),
     )
     async_add_entities(
         NinaButton(coordinator, device_key, device_name, description)

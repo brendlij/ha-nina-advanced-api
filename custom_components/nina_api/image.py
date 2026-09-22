@@ -17,7 +17,7 @@ from homeassistant.util import dt as dt_util
 
 from . import NinaConfigEntry
 from .api import NinaApiError
-from .const import DEVICE_LAST_IMAGE, IMAGE_SCALE
+from .const import DEVICE_LAST_IMAGE, DEVICE_NAMES, IMAGE_SCALE
 from .coordinator import NinaDataUpdateCoordinator
 from .entity import NinaEntity
 
@@ -58,7 +58,7 @@ class NinaLastImage(NinaEntity, ImageEntity):
     def __init__(
         self, hass: HomeAssistant, coordinator: NinaDataUpdateCoordinator
     ) -> None:
-        NinaEntity.__init__(self, coordinator, DEVICE_LAST_IMAGE, "Last image", "image")
+        NinaEntity.__init__(self, coordinator, DEVICE_LAST_IMAGE, DEVICE_NAMES[DEVICE_LAST_IMAGE], "image")
         ImageEntity.__init__(self, hass)
         self._cached: bytes | None = None
         self._cached_index: int | None = None

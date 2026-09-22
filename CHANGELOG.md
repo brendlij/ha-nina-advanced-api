@@ -5,6 +5,31 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] – 2026-09-22
+
+### Changed
+
+- **Devices are named after the integration.** With `has_entity_name`, Home
+  Assistant builds every entity id from the device name plus the entity name,
+  so "Camera" produced `sensor.camera_temperature` — which says nothing about
+  which camera in an install that has several. The devices are now "NINA",
+  "NINA Mount", "NINA Camera", "NINA Sequence" and "NINA Last Image", giving
+  `sensor.nina_camera_temperature` and `image.nina_last_image`. The prefix
+  drops the dots on purpose: "N.I.N.A." slugifies to `n_i_n_a`.
+
+  Existing entities keep the ids they were created with — Home Assistant
+  derives an id once and never rewrites it — so this only affects new
+  entities unless they are renamed by hand.
+
+## [0.3.1] – 2026-09-22
+
+### Fixed
+
+- The thirteen last-frame sensors have names again. `strings.json` carried
+  them, `translations/en.json` did not — and that is the file Home Assistant
+  reads at runtime, so they all fell back to the device name and arrived as
+  "Last image 2" through "Last image 10".
+
 ## [0.3.0] – 2026-09-22
 
 ### Added

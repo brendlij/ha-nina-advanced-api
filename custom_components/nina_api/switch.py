@@ -17,7 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import NinaConfigEntry
 from .api import NinaApiClient, NinaApiError
-from .const import DEVICE_CAMERA, DEVICE_MOUNT, TRACKING_MODE_TO_INT
+from .const import DEVICE_CAMERA, DEVICE_MOUNT, DEVICE_NAMES, TRACKING_MODE_TO_INT
 from .coordinator import NinaData, NinaDataUpdateCoordinator
 from .entity import NinaEntity
 
@@ -98,8 +98,8 @@ async def async_setup_entry(
 ) -> None:
     coordinator = entry.runtime_data
     groups = (
-        (DEVICE_CAMERA, "Camera", CAMERA_SWITCHES),
-        (DEVICE_MOUNT, "Mount", MOUNT_SWITCHES),
+        (DEVICE_CAMERA, DEVICE_NAMES[DEVICE_CAMERA], CAMERA_SWITCHES),
+        (DEVICE_MOUNT, DEVICE_NAMES[DEVICE_MOUNT], MOUNT_SWITCHES),
     )
     async_add_entities(
         NinaSwitch(coordinator, device_key, device_name, description)

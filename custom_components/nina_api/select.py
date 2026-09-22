@@ -10,9 +10,10 @@ from . import NinaConfigEntry
 from .api import NinaApiError
 from .const import (
     DEVICE_MOUNT,
+    DEVICE_NAMES,
+    TRACKING_MODES,
     TRACKING_MODE_OPTIONS,
     TRACKING_MODE_TO_INT,
-    TRACKING_MODES,
 )
 from .coordinator import NinaDataUpdateCoordinator
 from .entity import NinaEntity
@@ -34,7 +35,7 @@ class NinaTrackingModeSelect(NinaEntity, SelectEntity):
     _attr_options = TRACKING_MODE_OPTIONS
 
     def __init__(self, coordinator: NinaDataUpdateCoordinator) -> None:
-        super().__init__(coordinator, DEVICE_MOUNT, "Mount", "tracking_mode")
+        super().__init__(coordinator, DEVICE_MOUNT, DEVICE_NAMES[DEVICE_MOUNT], "tracking_mode")
 
     @property
     def current_option(self) -> str | None:
