@@ -200,17 +200,53 @@ class NinaApiClient:
         would mean re-implementing NINA's processing and getting a picture
         that disagrees with the one on the observatory screen.
         """
-        params: dict[str, Any] = {
-            "stream": _bool(True),
-            "autoPrepare": _bool(True),
-        }
+        params = self._image_params(quality, scale)
+        params["stream"] = _bool(True)
+        return await self._fetch_image(f"{self.base_url}/image/{index}", params)
+
+    async def get_prepared_image_bytes(
+        self,
+        *,
+        quality: int | None = None,
+        scale: float | None = None,
+    ) -> tuple[bytes, str]:
+        """Fetch the frame N.I.N.A. currently has prepared for display.
+
+        Preferred over get_image_bytes. This one hands back the rendering
+        NINA already holds in memory, while /image/{index} re-reads the FITS
+        from disk and renders it again from scratch - a 26 megapixel frame,
+        on the imaging PC, while it is exposing the next one.
+
+        It has no stream parameter: the endpoint always writes image bytes.
+        """
+        return await self._fetch_image(
+            f"{self.base_url}/prepared-image", self._image_params(quality, scale)
+        )
+
+    @staticmethod
+    def _image_params(quality: int | None, scale: float | None) -> dict[str, Any]:
+        """Build the rendering parameters both image endpoints share.
+
+        autoPrepare=true asks for exactly what NINA displays - its own
+        stretch and debayering. Reproducing that here would mean
+        re-implementing NINA's processing and getting a picture that
+        disagrees with the one on the observatory screen.
+
+        Quality matters more than it looks: omitting it makes the plugin
+        clamp 0 to -1, which means PNG, and a lossless half-size frame off
+        this sensor is megabytes per refresh.
+        """
+        params: dict[str, Any] = {"autoPrepare": _bool(True)}
         if quality is not None:
             params["quality"] = quality
         if scale is not None:
             params["resize"] = _bool(True)
             params["scale"] = scale
+        return params
 
-        url = f"{self.base_url}/image/{index}"
+    async def _fetch_image(
+        self, url: str, params: dict[str, Any]
+    ) -> tuple[bytes, str]:
         _LOGGER.debug("NINA image request: %s params=%s", url, params)
         try:
             async with self._session.get(

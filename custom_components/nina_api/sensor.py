@@ -20,13 +20,13 @@ from homeassistant.util import dt as dt_util
 
 from . import NinaConfigEntry
 from .const import (
-    CAMERA_STATES,
     DEVICE_APPLICATION,
     DEVICE_CAMERA,
     DEVICE_LAST_IMAGE,
     DEVICE_MOUNT,
     DEVICE_NAMES,
     DEVICE_SEQUENCE,
+    camera_state_of,
 )
 from .coordinator import NinaData, NinaDataUpdateCoordinator
 from .entity import NinaEntity
@@ -166,7 +166,7 @@ CAMERA_SENSORS: tuple[NinaSensorEntityDescription, ...] = (
         key="camera_state",
         translation_key="camera_state",
         icon="mdi:camera-iris",
-        value_fn=lambda d: CAMERA_STATES.get(d.camera.get("CameraState")),
+        value_fn=lambda d: camera_state_of(d.camera.get("CameraState")),
     ),
     NinaSensorEntityDescription(
         key="camera_gain",

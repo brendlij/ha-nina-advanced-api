@@ -1,6 +1,9 @@
 """Constants for the N.I.N.A. Advanced API integration."""
 from __future__ import annotations
 
+import re
+from typing import Any
+
 DOMAIN = "nina_api"
 MANUFACTURER = "N.I.N.A. / Christian Palm (Advanced API)"
 
@@ -98,6 +101,24 @@ CAMERA_STATES: dict[int, str] = {
     100: "loading_file",
 }
 
+def camera_state_of(value: Any) -> str | None:
+    """Fold CameraState into one vocabulary, whichever form arrives.
+
+    The plugin registers a JsonStringEnumConverter, so current builds send
+    the enum's *name* ("Exposing"), not its number - which is why looking it
+    up in the table above quietly produced nothing at all. Older builds sent
+    the number. Both end up as the same snake_case token, so a dashboard or
+    automation never has to care which build is answering.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return CAMERA_STATES.get(value)
+    if isinstance(value, str) and value:
+        return re.sub(r"(?<!^)(?=[A-Z])", "_", value).lower()
+    return None
+
+
 # Sequence item/trigger/condition states, already serialized as strings
 # by the plugin (SequenceEntityStatus.ToString()).
 SEQUENCE_STATUS_RUNNING = "RUNNING"
@@ -115,3 +136,8 @@ IMAGE_TIMEOUT = 60
 # hundred pixels. Halving it keeps the download reasonable without making
 # the picture useless for a glance at framing or clouds.
 IMAGE_SCALE = 0.5
+
+# JPEG quality for the dashboard frame. Without it the plugin falls back
+# to -1, which means PNG, and a lossless half-size frame off a 26 MP
+# sensor is several megabytes on every refresh.
+IMAGE_QUALITY = 85

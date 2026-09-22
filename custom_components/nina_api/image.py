@@ -17,7 +17,7 @@ from homeassistant.util import dt as dt_util
 
 from . import NinaConfigEntry
 from .api import NinaApiError
-from .const import DEVICE_LAST_IMAGE, DEVICE_NAMES, IMAGE_SCALE
+from .const import DEVICE_LAST_IMAGE, DEVICE_NAMES, IMAGE_QUALITY, IMAGE_SCALE
 from .coordinator import NinaDataUpdateCoordinator
 from .entity import NinaEntity
 
@@ -97,15 +97,32 @@ class NinaLastImage(NinaEntity, ImageEntity):
         if self._cached is not None and self._cached_index == index:
             return self._cached
 
+        client = self.coordinator.client
         try:
-            content, content_type = await self.coordinator.client.get_image_bytes(
-                index, scale=IMAGE_SCALE
+            content, content_type = await client.get_prepared_image_bytes(
+                quality=IMAGE_QUALITY, scale=IMAGE_SCALE
             )
-        except NinaApiError as err:
-            # A frame that cannot be fetched is not a reason to drop the
-            # entity: the next capture gets its own chance.
-            _LOGGER.debug("last image unavailable: %s", err)
-            return None
+        except NinaApiError as prepared_err:
+            # Nothing prepared yet - NINA was restarted, or no frame has
+            # been displayed this session. The history endpoint can still
+            # produce one, at the cost of re-reading the FITS from disk.
+            _LOGGER.debug("prepared image unavailable: %s", prepared_err)
+            try:
+                content, content_type = await client.get_image_bytes(
+                    index, quality=IMAGE_QUALITY, scale=IMAGE_SCALE
+                )
+            except NinaApiError as err:
+                # A frame that cannot be fetched is not a reason to drop the
+                # entity: the next capture gets its own chance. Logged loudly
+                # though - a grey card on the dashboard looks exactly like a
+                # broken integration, and this used to say nothing at all.
+                _LOGGER.warning(
+                    "Could not fetch the last frame from N.I.N.A. "
+                    "(prepared: %s; history: %s)",
+                    prepared_err,
+                    err,
+                )
+                return None
 
         self._attr_content_type = content_type
         self._cached = content
