@@ -18,6 +18,7 @@ _LOGGER = logging.getLogger(__name__)
 # Entities that only report what N.I.N.A. is doing. Always set up.
 READ_PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
+    Platform.IMAGE,
     Platform.SENSOR,
 ]
 
