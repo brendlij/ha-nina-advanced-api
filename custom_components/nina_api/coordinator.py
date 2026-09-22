@@ -22,7 +22,12 @@ from .api import (
     NinaApiError,
     NinaApiResponseError,
 )
-from .const import DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import (
+    CONF_READ_ONLY,
+    DEFAULT_READ_ONLY,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+)
 from .sequence import summarize_sequence
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,6 +35,10 @@ _LOGGER = logging.getLogger(__name__)
 # NINA answers 409 when a sub-system exists but has nothing loaded or
 # connected yet. That is a normal idle state, not an error worth logging.
 _STATUS_NOT_READY = 409
+
+# The image history answers 400 "Index out of range" while the session has
+# saved no frames. Also an idle state: nothing has been shot yet tonight.
+_STATUS_NO_IMAGE = 400
 
 
 @dataclass
@@ -42,6 +51,20 @@ class NinaData:
     application: dict[str, Any] = field(default_factory=dict)
     mount: dict[str, Any] = field(default_factory=dict)
     camera: dict[str, Any] = field(default_factory=dict)
+
+    # Statistics of the most recently saved frame. Empty until NINA has
+    # written one this session.
+    last_image: dict[str, Any] = field(default_factory=dict)
+
+    # How many frames the session has saved. The image endpoint addresses
+    # frames by index, so the newest one is image_count - 1; -1 means the
+    # session has none yet and there is nothing to fetch.
+    image_count: int = 0
+
+    @property
+    def last_image_index(self) -> int:
+        """Index of the newest saved frame, or -1 when there is none."""
+        return self.image_count - 1
 
     # Sequence
     sequence_loaded: bool = False
@@ -84,6 +107,12 @@ class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
             ),
         )
         self.client = client
+        # Read once at setup and then left alone: it decides which platforms
+        # were loaded, and unload has to tear down exactly those. Changing
+        # the option reloads the entry, which rebuilds this coordinator.
+        self.read_only: bool = config_entry.options.get(
+            CONF_READ_ONLY, DEFAULT_READ_ONLY
+        )
         # The NINA version cannot change while the app is running, so it is
         # fetched once and carried across refreshes.
         self._nina_version: str | None = None
@@ -125,6 +154,7 @@ class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
         data.camera = await self._fetch("camera", self.client.get_camera_info)
 
         await self._update_sequence(data)
+        await self._update_last_image(data)
 
         return data
 
@@ -168,3 +198,38 @@ class NinaDataUpdateCoordinator(DataUpdateCoordinator[NinaData]):
         data.sequence_running = summary.running
         data.sequence_items_total = summary.total
         data.sequence_items_finished = summary.finished
+
+    async def _update_last_image(self, data: NinaData) -> None:
+        """Populate the statistics of the last saved frame.
+
+        Cheap enough to poll, and the websocket turns every IMAGE-SAVE into
+        a refresh anyway, so the sensors follow the run frame by frame
+        rather than at the poll interval.
+        """
+        try:
+            image = await self.client.get_last_image()
+        except NinaApiResponseError as err:
+            if err.status_code != _STATUS_NO_IMAGE:
+                _LOGGER.debug("image history unavailable: %s", err)
+            return
+        except NinaApiError as err:
+            _LOGGER.debug("image history unavailable: %s", err)
+            return
+
+        # A single image still comes back wrapped in a list.
+        if isinstance(image, list):
+            image = image[0] if image else None
+
+        if isinstance(image, dict):
+            data.last_image = image
+
+        # The metadata carries no index, and the image endpoint needs one.
+        try:
+            count = await self.client.get_image_history(count_only=True)
+        except NinaApiError as err:
+            _LOGGER.debug("image count unavailable: %s", err)
+            return
+        if isinstance(count, int):
+            data.image_count = count
+        elif isinstance(count, dict) and isinstance(count.get("Count"), int):
+            data.image_count = count["Count"]

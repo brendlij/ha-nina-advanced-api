@@ -31,6 +31,14 @@ The WebSocket improvements below were already present on main and are included
   as well.
 - Each event also triggers an immediate, debounced state refresh, so entities
   no longer wait up to a full poll interval after something happens.
+- **Read-only mode.** A per-entry toggle, offered when adding the integration
+  and changeable afterwards under *Configure*, that loads only the reporting
+  entities. The `button`, `switch` and `select` platforms are never set up, so
+  nothing in Home Assistant can command the rig — not a dashboard, not an
+  automation, not Developer tools. Sensors and the event stream are unaffected.
+  Turning it on removes the entry's existing control entities from the registry
+  instead of leaving them behind as unavailable; turning it off creates them
+  again. Defaults to off, so existing entries keep every entity they have.
 
 ### Changed
 

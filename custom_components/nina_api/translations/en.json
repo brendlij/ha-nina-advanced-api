@@ -5,7 +5,11 @@
         "description": "Connect to the N.I.N.A. Advanced API. The plugin must be enabled in N.I.N.A. under Options.",
         "data": {
           "host": "Host / IP address",
-          "port": "Port"
+          "port": "Port",
+          "read_only": "Read-only mode"
+        },
+        "data_description": {
+          "read_only": "Only create entities that report state. No buttons, switches or selects are added, so Home Assistant cannot command N.I.N.A. You can change this later under Configure."
         }
       },
       "reconfigure": {
@@ -31,73 +35,182 @@
   "options": {
     "step": {
       "init": {
-        "description": "How often Home Assistant polls N.I.N.A. Lower values react faster but create more load.",
+        "description": "Polling and control settings for this N.I.N.A. instance.",
         "data": {
-          "scan_interval": "Polling interval"
+          "scan_interval": "Polling interval",
+          "read_only": "Read-only mode"
+        },
+        "data_description": {
+          "scan_interval": "How often Home Assistant polls N.I.N.A. Lower values react faster but create more load.",
+          "read_only": "Keep the sensors, drop every control. Turning this on deletes the buttons, switches and selects of this entry; turning it off creates them again."
         }
       }
     }
   },
   "entity": {
     "binary_sensor": {
-      "application_connected": { "name": "Connected" },
-      "mount_connected": { "name": "Connected" },
-      "mount_tracking": { "name": "Tracking" },
-      "mount_parked": { "name": "Parked" },
-      "mount_at_home": { "name": "At home position" },
-      "mount_slewing": { "name": "Slewing" },
-      "mount_pulse_guiding": { "name": "Pulse guiding" },
-      "camera_connected": { "name": "Connected" },
-      "camera_cooling": { "name": "Cooling active" },
-      "camera_at_target_temp": { "name": "At target temperature" },
-      "camera_exposing": { "name": "Exposing" },
-      "camera_dew_heater": { "name": "Dew heater" },
-      "sequence_running": { "name": "Running" },
-      "sequence_loaded": { "name": "Loaded" }
+      "application_connected": {
+        "name": "Connected"
+      },
+      "mount_connected": {
+        "name": "Connected"
+      },
+      "mount_tracking": {
+        "name": "Tracking"
+      },
+      "mount_parked": {
+        "name": "Parked"
+      },
+      "mount_at_home": {
+        "name": "At home position"
+      },
+      "mount_slewing": {
+        "name": "Slewing"
+      },
+      "mount_pulse_guiding": {
+        "name": "Pulse guiding"
+      },
+      "camera_connected": {
+        "name": "Connected"
+      },
+      "camera_cooling": {
+        "name": "Cooling active"
+      },
+      "camera_at_target_temp": {
+        "name": "At target temperature"
+      },
+      "camera_exposing": {
+        "name": "Exposing"
+      },
+      "camera_dew_heater": {
+        "name": "Dew heater"
+      },
+      "sequence_running": {
+        "name": "Running"
+      },
+      "sequence_loaded": {
+        "name": "Loaded"
+      }
     },
     "sensor": {
-      "nina_version": { "name": "N.I.N.A. version" },
-      "api_version": { "name": "API version" },
-      "mount_ra": { "name": "Right ascension" },
-      "mount_dec": { "name": "Declination" },
-      "mount_altitude": { "name": "Altitude" },
-      "mount_azimuth": { "name": "Azimuth" },
-      "mount_sidereal_time": { "name": "Sidereal time" },
-      "mount_time_to_meridian_flip": { "name": "Time to meridian flip" },
-      "mount_side_of_pier": { "name": "Side of pier" },
-      "mount_name": { "name": "Device" },
-      "camera_temperature": { "name": "Temperature" },
-      "camera_target_temperature": { "name": "Target temperature" },
-      "camera_cooler_power": { "name": "Cooler power" },
-      "camera_state": { "name": "State" },
-      "camera_gain": { "name": "Gain" },
-      "camera_offset": { "name": "Offset" },
-      "camera_binning": { "name": "Binning" },
-      "camera_last_download_time": { "name": "Last download time" },
-      "camera_name": { "name": "Device" },
-      "sequence_current_item": { "name": "Current step" },
-      "sequence_progress": { "name": "Progress" }
+      "nina_version": {
+        "name": "N.I.N.A. version"
+      },
+      "api_version": {
+        "name": "API version"
+      },
+      "mount_ra": {
+        "name": "Right ascension"
+      },
+      "mount_dec": {
+        "name": "Declination"
+      },
+      "mount_altitude": {
+        "name": "Altitude"
+      },
+      "mount_azimuth": {
+        "name": "Azimuth"
+      },
+      "mount_sidereal_time": {
+        "name": "Sidereal time"
+      },
+      "mount_time_to_meridian_flip": {
+        "name": "Time to meridian flip"
+      },
+      "mount_side_of_pier": {
+        "name": "Side of pier"
+      },
+      "mount_name": {
+        "name": "Device"
+      },
+      "camera_temperature": {
+        "name": "Temperature"
+      },
+      "camera_target_temperature": {
+        "name": "Target temperature"
+      },
+      "camera_cooler_power": {
+        "name": "Cooler power"
+      },
+      "camera_state": {
+        "name": "State"
+      },
+      "camera_gain": {
+        "name": "Gain"
+      },
+      "camera_offset": {
+        "name": "Offset"
+      },
+      "camera_binning": {
+        "name": "Binning"
+      },
+      "camera_last_download_time": {
+        "name": "Last download time"
+      },
+      "camera_name": {
+        "name": "Device"
+      },
+      "sequence_current_item": {
+        "name": "Current step"
+      },
+      "sequence_progress": {
+        "name": "Progress"
+      }
     },
     "button": {
-      "mount_park": { "name": "Park" },
-      "mount_unpark": { "name": "Unpark" },
-      "mount_home": { "name": "Slew to home" },
-      "mount_flip": { "name": "Meridian flip" },
-      "mount_stop_slew": { "name": "Stop slew" },
-      "mount_set_park_position": { "name": "Set park position" },
-      "camera_abort_exposure": { "name": "Abort exposure" },
-      "camera_cancel_cooling": { "name": "Cancel cooling" },
-      "sequence_start": { "name": "Start sequence" },
-      "sequence_stop": { "name": "Stop sequence" },
-      "sequence_reset": { "name": "Reset sequence" },
-      "sequence_skip_current": { "name": "Skip current step" },
-      "sequence_skip_to_imaging": { "name": "Skip to imaging" },
-      "sequence_skip_to_end": { "name": "Skip to end" }
+      "mount_park": {
+        "name": "Park"
+      },
+      "mount_unpark": {
+        "name": "Unpark"
+      },
+      "mount_home": {
+        "name": "Slew to home"
+      },
+      "mount_flip": {
+        "name": "Meridian flip"
+      },
+      "mount_stop_slew": {
+        "name": "Stop slew"
+      },
+      "mount_set_park_position": {
+        "name": "Set park position"
+      },
+      "camera_abort_exposure": {
+        "name": "Abort exposure"
+      },
+      "camera_cancel_cooling": {
+        "name": "Cancel cooling"
+      },
+      "sequence_start": {
+        "name": "Start sequence"
+      },
+      "sequence_stop": {
+        "name": "Stop sequence"
+      },
+      "sequence_reset": {
+        "name": "Reset sequence"
+      },
+      "sequence_skip_current": {
+        "name": "Skip current step"
+      },
+      "sequence_skip_to_imaging": {
+        "name": "Skip to imaging"
+      },
+      "sequence_skip_to_end": {
+        "name": "Skip to end"
+      }
     },
     "switch": {
-      "camera_cooler": { "name": "Cooler" },
-      "camera_dew_heater": { "name": "Dew heater" },
-      "mount_tracking": { "name": "Tracking" }
+      "camera_cooler": {
+        "name": "Cooler"
+      },
+      "camera_dew_heater": {
+        "name": "Dew heater"
+      },
+      "mount_tracking": {
+        "name": "Tracking"
+      }
     },
     "select": {
       "mount_tracking_mode": {

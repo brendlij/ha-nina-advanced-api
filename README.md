@@ -94,6 +94,31 @@ Everything is grouped into four devices under one config entry.
 > N.I.N.A. does not have to be running. When it is closed, entities stay in
 > place and read as unavailable — they are never removed from the registry.
 
+## Read-only mode
+
+Everything in the tables above is split into two groups: entities that *report*
+(`sensor`, `binary_sensor`) and entities that *command* (`button`, `switch`,
+`select`). **Read-only mode** loads only the first group.
+
+| Mode | You get | N.I.N.A. can be controlled from HA |
+| --- | --- | --- |
+| Read / write *(default)* | Everything | Yes |
+| Read-only | `sensor`, `binary_sensor` | No |
+
+The control platforms are not set up at all, so nothing can command the rig —
+not a dashboard button, not an automation, not Developer tools. The websocket
+stays connected: events are read-only too, and keep firing either way.
+
+Pick the mode when you add the integration, or change it later under
+Devices & services → N.I.N.A. Advanced API → **Configure**.
+
+> [!WARNING]
+> Switching *to* read-only **deletes** this entry's buttons, switches and
+> selects from the entity registry — otherwise Home Assistant would keep
+> nagging that they are "no longer being provided". Switching back re-creates
+> them; they take their old entity IDs again if those are still free, but any
+> rename, icon or area you set on them is gone. Sensors are never touched.
+
 ## Installation
 
 ### HACS (recommended)
@@ -116,6 +141,7 @@ directory and restart.
 | --- | --- |
 | Host / IP / port | Devices & services → N.I.N.A. Advanced API → ⋮ → **Reconfigure** |
 | Polling interval | …same menu → **Configure** (5–3600 s, default 30 s) |
+| [Read-only mode](#read-only-mode) | …same menu → **Configure** |
 
 The new address is validated before it is saved, and the entry is updated in
 place — entity IDs, history and dashboard cards all survive the change.

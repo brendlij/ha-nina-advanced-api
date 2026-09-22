@@ -27,8 +27,10 @@ from .api import (
     NinaApiNotFoundError,
 )
 from .const import (
+    CONF_READ_ONLY,
     DEFAULT_NAME,
     DEFAULT_PORT,
+    DEFAULT_READ_ONLY,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     MAX_SCAN_INTERVAL,
@@ -37,10 +39,18 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-STEP_USER_DATA_SCHEMA = vol.Schema(
+# Host and port on their own: reconfigure only moves the connection and must
+# not offer - or silently reset - the mode, which lives in the options.
+CONNECTION_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
+    }
+)
+
+STEP_USER_DATA_SCHEMA = CONNECTION_SCHEMA.extend(
+    {
+        vol.Required(CONF_READ_ONLY, default=DEFAULT_READ_ONLY): bool,
     }
 )
 
@@ -58,6 +68,7 @@ OPTIONS_SCHEMA = vol.Schema(
             ),
             vol.Coerce(int),
         ),
+        vol.Required(CONF_READ_ONLY, default=DEFAULT_READ_ONLY): bool,
     }
 )
 
@@ -117,6 +128,9 @@ class NinaApiConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_HOST: user_input[CONF_HOST],
                         CONF_PORT: user_input[CONF_PORT],
                     },
+                    # The mode belongs to the options, next to the polling
+                    # interval, so it stays editable under "Configure".
+                    options={CONF_READ_ONLY: user_input[CONF_READ_ONLY]},
                 )
             errors["base"] = error
 
@@ -153,7 +167,7 @@ class NinaApiConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="reconfigure",
             data_schema=self.add_suggested_values_to_schema(
-                STEP_USER_DATA_SCHEMA, user_input or entry.data
+                CONNECTION_SCHEMA, user_input or entry.data
             ),
             errors=errors,
         )

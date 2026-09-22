@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -14,17 +15,37 @@ from homeassistant.components.sensor import (
 from homeassistant.const import EntityCategory, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from . import NinaConfigEntry
 from .const import (
     CAMERA_STATES,
     DEVICE_APPLICATION,
     DEVICE_CAMERA,
+    DEVICE_LAST_IMAGE,
     DEVICE_MOUNT,
     DEVICE_SEQUENCE,
 )
 from .coordinator import NinaData, NinaDataUpdateCoordinator
 from .entity import NinaEntity
+
+
+def _capture_time(value: Any) -> datetime | None:
+    """Turn NINA's capture timestamp into something HA will accept.
+
+    The API serializes a C# DateTime, which carries no UTC offset. A naive
+    value is therefore read as the Home Assistant machine's local time -
+    the usual single-PC or same-site setup - because a timestamp sensor
+    rejects a naive datetime outright.
+    """
+    if not isinstance(value, str):
+        return None
+    parsed = dt_util.parse_datetime(value)
+    if parsed is None:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
+    return parsed
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -210,6 +231,112 @@ SEQUENCE_SENSORS: tuple[NinaSensorEntityDescription, ...] = (
 )
 
 
+# Statistics of the frame NINA last wrote to disk. The websocket refreshes
+# the coordinator on IMAGE-SAVE, so these follow the run sub by sub.
+LAST_IMAGE_SENSORS: tuple[NinaSensorEntityDescription, ...] = (
+    NinaSensorEntityDescription(
+        key="image_hfr",
+        translation_key="image_hfr",
+        icon="mdi:blur",
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
+        value_fn=lambda d: d.last_image.get("HFR"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_stars",
+        translation_key="image_stars",
+        icon="mdi:star-four-points-outline",
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda d: d.last_image.get("Stars"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_filter",
+        translation_key="image_filter",
+        icon="mdi:filter-outline",
+        value_fn=lambda d: d.last_image.get("Filter"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_exposure_time",
+        translation_key="image_exposure_time",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        suggested_display_precision=1,
+        value_fn=lambda d: d.last_image.get("ExposureTime"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_target",
+        translation_key="image_target",
+        icon="mdi:target",
+        value_fn=lambda d: d.last_image.get("TargetName"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_date",
+        translation_key="image_date",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda d: _capture_time(d.last_image.get("Date")),
+    ),
+    NinaSensorEntityDescription(
+        key="image_guiding_rms",
+        translation_key="image_guiding_rms",
+        icon="mdi:crosshairs-gps",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # RmsText is NINA's own formatted summary of the guiding error
+        # recorded during the exposure, not a plain number.
+        value_fn=lambda d: d.last_image.get("RmsText"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_hfr_std_dev",
+        translation_key="image_hfr_std_dev",
+        icon="mdi:blur-radial",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=2,
+        value_fn=lambda d: d.last_image.get("HFRStDev"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_mean",
+        translation_key="image_mean",
+        icon="mdi:chart-histogram",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+        value_fn=lambda d: d.last_image.get("Mean"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_median",
+        translation_key="image_median",
+        icon="mdi:chart-histogram",
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=0,
+        value_fn=lambda d: d.last_image.get("Median"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_temperature",
+        translation_key="image_temperature",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.last_image.get("Temperature"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_type",
+        translation_key="image_type",
+        icon="mdi:image-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.last_image.get("ImageType"),
+    ),
+    NinaSensorEntityDescription(
+        key="image_filename",
+        translation_key="image_filename",
+        icon="mdi:file-image-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda d: d.last_image.get("Filename"),
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: NinaConfigEntry,
@@ -221,6 +348,7 @@ async def async_setup_entry(
         (DEVICE_MOUNT, "Mount", MOUNT_SENSORS),
         (DEVICE_CAMERA, "Camera", CAMERA_SENSORS),
         (DEVICE_SEQUENCE, "Sequence", SEQUENCE_SENSORS),
+        (DEVICE_LAST_IMAGE, "Last image", LAST_IMAGE_SENSORS),
     )
     async_add_entities(
         NinaSensor(coordinator, device_key, device_name, description)

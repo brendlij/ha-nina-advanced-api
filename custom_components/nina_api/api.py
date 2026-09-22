@@ -12,7 +12,7 @@ from typing import Any
 
 import aiohttp
 
-from .const import API_BASE_PATH, API_TIMEOUT, WS_PATH
+from .const import API_BASE_PATH, API_TIMEOUT, IMAGE_TIMEOUT, WS_PATH
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -180,6 +180,80 @@ class NinaApiClient:
             "GET",
             "image-history",
             params={"all": _bool(not count_only), "count": _bool(count_only)},
+        )
+
+    async def get_image_bytes(
+        self,
+        index: int,
+        *,
+        quality: int | None = None,
+        scale: float | None = None,
+    ) -> tuple[bytes, str]:
+        """Fetch one frame as image bytes, with its content type.
+
+        Uses stream=true so NINA hands back the encoded image directly;
+        without it the same endpoint wraps a base64 string in the usual
+        envelope, which would mean decoding a megabyte of text per frame.
+
+        autoPrepare=true asks for exactly what NINA displays - its own
+        stretch and debayering. Reproducing that here from the raw data
+        would mean re-implementing NINA's processing and getting a picture
+        that disagrees with the one on the observatory screen.
+        """
+        params: dict[str, Any] = {
+            "stream": _bool(True),
+            "autoPrepare": _bool(True),
+        }
+        if quality is not None:
+            params["quality"] = quality
+        if scale is not None:
+            params["resize"] = _bool(True)
+            params["scale"] = scale
+
+        url = f"{self.base_url}/image/{index}"
+        _LOGGER.debug("NINA image request: %s params=%s", url, params)
+        try:
+            async with self._session.get(
+                url,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=IMAGE_TIMEOUT),
+            ) as resp:
+                resp.raise_for_status()
+                content_type = resp.headers.get("Content-Type", "image/jpeg")
+                # An error still arrives as the JSON envelope, HTTP 200 and
+                # all - so anything that is not an image is a failure.
+                if not content_type.startswith("image/"):
+                    body = await resp.json(content_type=None)
+                    raise NinaApiResponseError(
+                        (body or {}).get("Error") or "No image available",
+                        status_code=(body or {}).get("StatusCode"),
+                    )
+                return await resp.read(), content_type
+        except NinaApiError:
+            raise
+        except aiohttp.ClientResponseError as err:
+            raise NinaApiError(f"HTTP {err.status} from NINA for {url}") from err
+        except (aiohttp.ClientConnectionError, TimeoutError) as err:
+            raise NinaApiConnectionError(
+                f"Cannot fetch image from NINA at {self._host}:{self._port}: {err}"
+            ) from err
+        except aiohttp.ClientError as err:
+            raise NinaApiConnectionError(
+                f"Transport error fetching image from NINA: {err}"
+            ) from err
+
+    async def get_last_image(self) -> Any:
+        """Return metadata for the most recently saved frame.
+
+        Omitting `index` makes NINA pick the newest entry, which it returns
+        as a one-element list. Raises NinaApiResponseError with StatusCode
+        400 ("Index out of range") while the session has saved nothing yet -
+        callers are expected to read that as "no frame taken", not failure.
+        """
+        return await self._request(
+            "GET",
+            "image-history",
+            params={"all": _bool(False), "count": _bool(False)},
         )
 
     # -- Mount -------------------------------------------------------------

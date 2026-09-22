@@ -5,7 +5,8 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import NinaApiClient
@@ -14,15 +15,29 @@ from .websocket import NinaWebsocketListener
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [
+# Entities that only report what N.I.N.A. is doing. Always set up.
+READ_PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
+    Platform.SENSOR,
+]
+
+# Entities that command N.I.N.A. Skipped entirely in read-only mode, so a
+# read-only entry has no way to move the mount, touch the cooler or drive
+# the sequence - not even from Developer tools.
+CONTROL_PLATFORMS: list[Platform] = [
     Platform.BUTTON,
     Platform.SELECT,
-    Platform.SENSOR,
     Platform.SWITCH,
 ]
 
 type NinaConfigEntry = ConfigEntry[NinaDataUpdateCoordinator]
+
+
+def _platforms_for(read_only: bool) -> list[Platform]:
+    """Return the platforms an entry in this mode owns."""
+    if read_only:
+        return list(READ_PLATFORMS)
+    return [*READ_PLATFORMS, *CONTROL_PLATFORMS]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: NinaConfigEntry) -> bool:
@@ -43,12 +58,44 @@ async def async_setup_entry(hass: HomeAssistant, entry: NinaConfigEntry) -> bool
     listener.start(entry)
     entry.async_on_unload(listener.async_stop)
 
-    # Picks up a changed host/port from the reconfigure flow and a changed
-    # poll interval from the options flow - both only take effect on reload.
+    # Picks up a changed host/port from the reconfigure flow, and a changed
+    # poll interval or read-only mode from the options flow - all of them
+    # only take effect on reload.
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    if coordinator.read_only:
+        _async_remove_control_entities(hass, entry)
+
+    await hass.config_entries.async_forward_entry_setups(
+        entry, _platforms_for(coordinator.read_only)
+    )
     return True
+
+
+@callback
+def _async_remove_control_entities(
+    hass: HomeAssistant, entry: NinaConfigEntry
+) -> None:
+    """Drop the control entities this entry left behind in the registry.
+
+    Skipping the platforms is enough to make the entities stop working, but
+    the registry would keep the old rows around as unavailable and Home
+    Assistant would nag about them "no longer being provided". Read-only is
+    an explicit choice, so clear them out; flipping back re-creates them.
+    """
+    registry = er.async_get(hass)
+    control_domains = {platform.value for platform in CONTROL_PLATFORMS}
+
+    # Materialized up front: async_remove mutates the registry's index.
+    for registry_entry in list(
+        er.async_entries_for_config_entry(registry, entry.entry_id)
+    ):
+        if registry_entry.domain in control_domains:
+            _LOGGER.debug(
+                "Read-only mode: removing control entity %s",
+                registry_entry.entity_id,
+            )
+            registry.async_remove(registry_entry.entity_id)
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: NinaConfigEntry) -> None:
@@ -58,4 +105,10 @@ async def _async_update_listener(hass: HomeAssistant, entry: NinaConfigEntry) ->
 
 async def async_unload_entry(hass: HomeAssistant, entry: NinaConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    # The coordinator carries the mode this entry was *set up* with. Reading
+    # the options again here would be wrong: on an options change Home
+    # Assistant saves them before reloading, so the new mode would be used to
+    # tear down platforms the old one never loaded.
+    return await hass.config_entries.async_unload_platforms(
+        entry, _platforms_for(entry.runtime_data.read_only)
+    )

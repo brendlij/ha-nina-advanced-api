@@ -21,6 +21,12 @@ DEFAULT_SCAN_INTERVAL = 30  # seconds
 MIN_SCAN_INTERVAL = 5
 MAX_SCAN_INTERVAL = 3600
 
+# Read-only mode: report state, never command N.I.N.A. Set at setup and
+# changeable afterwards via the options flow. Defaults to off so an existing
+# entry keeps every control entity it already has.
+CONF_READ_ONLY = "read_only"
+DEFAULT_READ_ONLY = False
+
 # Reconnect backoff for the websocket listener
 WS_RECONNECT_DELAY = 5  # seconds
 WS_RECONNECT_DELAY_MAX = 60  # seconds
@@ -40,6 +46,10 @@ DEVICE_APPLICATION = "application"
 DEVICE_MOUNT = "mount"
 DEVICE_CAMERA = "camera"
 DEVICE_SEQUENCE = "sequence"
+# Statistics of the last saved frame. Kept apart from the camera device:
+# these describe one exposure that is already on disk, not the hardware's
+# current state.
+DEVICE_LAST_IMAGE = "last_image"
 
 # -- Equipment connection states as reported by NINA ---------------------
 # (used to normalize the "Connected" boolean across equipment endpoints)
@@ -83,3 +93,12 @@ SEQUENCE_STATUS_RUNNING = "RUNNING"
 SKIP_CURRENT_ITEMS = "CurrentItems"
 SKIP_TO_END = "ToEnd"
 SKIP_TO_IMAGING = "ToImaging"
+
+# A frame is orders of magnitude larger than any status response, and NINA
+# stretches and encodes it on request, so it needs its own budget.
+IMAGE_TIMEOUT = 60
+
+# A full astro frame is many megapixels; a dashboard card shows a few
+# hundred pixels. Halving it keeps the download reasonable without making
+# the picture useless for a glance at framing or clouds.
+IMAGE_SCALE = 0.5
