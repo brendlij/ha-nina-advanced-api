@@ -5,7 +5,38 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.1] � 2026-09-20
+## [0.3.0] – 2026-09-22
+
+### Added
+
+- **Read-only mode.** A per-entry toggle, offered when adding the integration
+  and changeable afterwards under *Configure*, that loads only the reporting
+  entities. The `button`, `switch` and `select` platforms are never set up, so
+  nothing in Home Assistant can command the rig — not a dashboard, not an
+  automation, not Developer tools. Sensors and the event stream are unaffected.
+  Turning it on removes the entry's existing control entities from the registry
+  instead of leaving them behind as unavailable; turning it off creates them
+  again. Defaults to off, so existing entries keep every entity they have.
+- **Last frame as its own device.** Thirteen sensors describing the newest
+  saved exposure — HFR, star count, filter, exposure time, target, capture
+  time, guiding RMS, HFR standard deviation, mean, median, temperature, image
+  type and file name. Kept apart from the camera device on purpose: these
+  describe one exposure already on disk, not the hardware's current state.
+- **The frame itself**, as an `image` entity on that device. Fetched with
+  `autoPrepare`, so it is exactly what N.I.N.A. displays rather than a second
+  attempt at its stretch and debayering. `image_last_updated` follows the
+  capture time rather than the poll interval, so the picture is re-fetched
+  when a new frame lands instead of on every update tick. Unavailable until
+  the session has saved something.
+
+### Fixed
+
+- The coordinator no longer carries an unresolved stash conflict, which left
+  the module with markers in it and unable to import.
+- The changelog is valid UTF-8 again; one byte was cp1252 and rendered as a
+  replacement character.
+
+## [0.2.1] — 2026-09-20
 
 ### Fixed
 
@@ -31,14 +62,6 @@ The WebSocket improvements below were already present on main and are included
   as well.
 - Each event also triggers an immediate, debounced state refresh, so entities
   no longer wait up to a full poll interval after something happens.
-- **Read-only mode.** A per-entry toggle, offered when adding the integration
-  and changeable afterwards under *Configure*, that loads only the reporting
-  entities. The `button`, `switch` and `select` platforms are never set up, so
-  nothing in Home Assistant can command the rig — not a dashboard, not an
-  automation, not Developer tools. Sensors and the event stream are unaffected.
-  Turning it on removes the entry's existing control entities from the registry
-  instead of leaving them behind as unavailable; turning it off creates them
-  again. Defaults to off, so existing entries keep every entity they have.
 
 ### Changed
 
