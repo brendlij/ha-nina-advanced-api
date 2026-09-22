@@ -94,7 +94,7 @@
     },
     "sensor": {
       "nina_version": {
-        "name": "N.I.N.A. version"
+        "name": "Version"
       },
       "api_version": {
         "name": "API version"

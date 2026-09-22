@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The application version sensor is called "Version" rather than "N.I.N.A.
+  version". On the device named NINA the old label read as "NINA N.I.N.A.
+  version", and the entity id derived from it as `sensor.nina_n_i_n_a_version`.
+
 - **Devices are named after the integration.** With `has_entity_name`, Home
   Assistant builds every entity id from the device name plus the entity name,
   so "Camera" produced `sensor.camera_temperature` — which says nothing about
