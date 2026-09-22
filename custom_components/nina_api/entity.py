@@ -23,11 +23,19 @@ class NinaEntity(CoordinatorEntity[NinaDataUpdateCoordinator]):
         super().__init__(coordinator)
         entry_id = coordinator.config_entry.entry_id
         self._attr_unique_id = f"{entry_id}_{device_key}_{unique_id_suffix}"
+        # No via_device. Home Assistant deprecated passing it through
+        # DeviceInfo, and in the context the entity-registry editor runs in
+        # it now raises rather than warns — which made every entity on every
+        # platform fail to be added, not just lose its parent.
+        #
+        # Nothing is lost by dropping it: the identifier it pointed at,
+        # (DOMAIN, entry_id), was never registered as a device of its own,
+        # so the link resolved to nothing and every device already sat at
+        # the top level.
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, f"{entry_id}_{device_key}")},
             name=device_name,
             manufacturer=MANUFACTURER,
-            via_device=(DOMAIN, entry_id),
         )
 
     @property

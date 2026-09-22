@@ -5,13 +5,29 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] – 2026-09-22
+## [0.4.2] – 2026-09-22
+
+### Fixed
+
+- **Every entity failed to be added.** The device info passed `via_device`,
+  which Home Assistant has deprecated; in the context the entity-registry
+  editor runs in it now raises instead of warning, and the exception took
+  down entity creation on every platform — sensors, binary sensors, buttons,
+  switches, select and image alike. Dropping it costs nothing: the
+  identifier it pointed at was never registered as a device, so the link
+  resolved to nothing and every device already sat at the top level.
+
+## [0.4.1] – 2026-09-22
 
 ### Changed
 
 - The application version sensor is called "Version" rather than "N.I.N.A.
   version". On the device named NINA the old label read as "NINA N.I.N.A.
   version", and the entity id derived from it as `sensor.nina_n_i_n_a_version`.
+
+## [0.4.0] – 2026-09-22
+
+### Changed
 
 - **Devices are named after the integration.** With `has_entity_name`, Home
   Assistant builds every entity id from the device name plus the entity name,
