@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+from math import isfinite
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -375,7 +376,18 @@ class NinaSensor(NinaEntity, SensorEntity):
 
     @property
     def native_value(self) -> Any:
-        return self.entity_description.value_fn(self.coordinator.data)
+        value = self.entity_description.value_fn(self.coordinator.data)
+        # N.I.N.A. reports NaN for mount coordinates whenever the driver has
+        # no valid position to give - between connecting and the first read,
+        # and after a park on some ASCOM mounts. Home Assistant refuses a
+        # non-finite number on a measurement sensor by raising, and that
+        # exception comes out of the coordinator listener, so one NaN takes
+        # down the whole update cycle rather than one entity. Screening it
+        # here covers every numeric sensor instead of asking each value_fn
+        # to remember.
+        if isinstance(value, float) and not isfinite(value):
+            return None
+        return value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
