@@ -56,6 +56,25 @@ class NinaApiResponseError(NinaApiError):
         self.status_code = status_code
 
 
+def _media_type(header: str | None, default: str) -> str:
+    """Reduce a Content-Type header to its media type.
+
+    EmbedIO appends "; charset=utf-8" to everything it serves, images
+    included. Passing that straight through looks harmless - the bytes are
+    fine and the image/ prefix still matches - but Home Assistant hands the
+    value to aiohttp when it serves the frame back to the browser, and
+    aiohttp rejects a content type carrying parameters:
+
+        ValueError: charset must not be in content_type argument
+
+    That happens in the image component, long after this module has
+    returned, so nothing here ever saw it fail.
+    """
+    if not header:
+        return default
+    return header.split(";", 1)[0].strip() or default
+
+
 class NinaApiClient:
     """Client for the N.I.N.A. Advanced API (v2)."""
 
@@ -255,7 +274,9 @@ class NinaApiClient:
                 timeout=aiohttp.ClientTimeout(total=IMAGE_TIMEOUT),
             ) as resp:
                 resp.raise_for_status()
-                content_type = resp.headers.get("Content-Type", "image/jpeg")
+                content_type = _media_type(
+                    resp.headers.get("Content-Type"), "image/jpeg"
+                )
                 # An error still arrives as the JSON envelope, HTTP 200 and
                 # all - so anything that is not an image is a failure.
                 if not content_type.startswith("image/"):
